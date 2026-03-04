@@ -1,10 +1,7 @@
-
-
 import aiohttp
 import html
 import os
 import time
-import re
 from urllib.parse import urlparse
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -21,7 +18,7 @@ from telegram.ext import (
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-CHANNEL_ID = -1003736030609  # 🔥 APNA PRIVATE CHANNEL ID DAALO
+CHANNEL_ID = -1003736030609
 PRIVATE_INVITE_LINK = "https://t.me/+msYViqd3ictiYzZl"
 
 API_ENDPOINT = "https://terabox.anshapi.workers.dev/api/terabox-down?url="
@@ -37,8 +34,6 @@ COOLDOWN_SECONDS = 10
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN not set!")
-
-# ================= MEMORY =================
 
 approved_users = set()
 user_last_request = {}
@@ -57,18 +52,16 @@ def is_valid_link(url: str):
     except:
         return False
 
-# ================= JOIN REQUEST AUTO DETECT =================
+# ================= JOIN REQUEST HANDLER =================
 
 async def join_request_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.chat_join_request.from_user
     approved_users.add(user.id)
-    print(f"Auto access granted → {user.id}")
+    print(f"Access granted → {user.id}")
 
 # ================= ACCESS CHECK =================
 
 async def check_access(user_id, context):
-
-    # If already detected request
     if user_id in approved_users:
         return True
 
@@ -89,16 +82,14 @@ async def send_join_message(update: Update):
     ]
 
     await update.message.reply_text(
-        "🚫 You must send join request to use this bot.\n\n"
-        "Click below and send request.\n"
-        "After sending request, just send your link again.",
+        "🚫 You must join our channel first.\n\n"
+        "Send join request and then send your link again.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 # ================= START =================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     if not await check_access(update.effective_user.id, context):
         await send_join_message(update)
         return
@@ -111,14 +102,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
 
-    # Access check
     if not await check_access(user_id, context):
         await send_join_message(update)
         return
 
     user_url = update.message.text.strip()
 
-    # Domain check
     if not is_valid_link(user_url):
         await update.message.reply_text(
             "❌ Invalid link!\n\n"
@@ -130,7 +119,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Cooldown
     now = time.time()
     if user_id in user_last_request:
         if now - user_last_request[user_id] < COOLDOWN_SECONDS:
@@ -143,35 +131,59 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(API_ENDPOINT + user_url, timeout=15) as resp:
+            async with session.get(API_ENDPOINT + user_url, timeout=20) as resp:
+                if resp.status != 200:
+                    await msg.edit_text("❌ API not responding.")
+                    return
+
                 data = await resp.json()
 
         if not data.get("data"):
             await msg.edit_text("❌ Failed to fetch file.")
             return
 
-        file_data = data["data"]["videos"][0]
+        file_block = data["data"]
 
-        name = html.escape(file_data["name"])
-        size = file_data["size"]
-        thumb = file_data["thumbnail"]
-        download_link = file_data["urls"]["download"]
+        # 🔥 FIXED PART (Your API uses "list")
+        if "list" in file_block and file_block["list"]:
+
+            file_data = file_block["list"][0]
+
+            name = html.escape(file_data.get("server_filename", "Unknown File"))
+            size = file_data.get("formatted_size", "Unknown")
+            thumb = file_data.get("thumbs", {}).get("url1")
+            download_link = file_data.get("direct_link")
+            stream_link = file_data.get("stream_url")
+
+        else:
+            await msg.edit_text("❌ No files found.")
+            return
 
         keyboard = [
-            [InlineKeyboardButton("⬇ Download", url=download_link)]
+            [
+                InlineKeyboardButton("⬇ Download", url=download_link),
+                InlineKeyboardButton("▶ Stream", url=stream_link),
+            ]
         ]
 
-        await update.message.reply_photo(
-            photo=thumb,
-            caption=f"<b>{name}</b>\nSize: {size}",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
+        if thumb:
+            await update.message.reply_photo(
+                photo=thumb,
+                caption=f"<b>{name}</b>\nSize: {size}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+        else:
+            await update.message.reply_text(
+                f"<b>{name}</b>\nSize: {size}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
 
         await msg.delete()
 
     except Exception as e:
-        print("Error:", e)
+        print("FULL ERROR:", e)
         await msg.edit_text("❌ Server error while fetching file.")
 
 # ================= RUN =================
