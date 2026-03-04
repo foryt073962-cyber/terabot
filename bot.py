@@ -13,7 +13,7 @@ from telegram.ext import (
     filters
 )
 
-BOT_TOKEN = os.getenv("8765085860:AAGWPNYdRPDhG_PGdcDIamMP9TS4uCpYC6A")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_ENDPOINT = "https://terabox.anshapi.workers.dev/api/terabox-down?url="
 
 ADMIN_ID = 6943459142
