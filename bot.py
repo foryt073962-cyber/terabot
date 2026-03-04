@@ -19,7 +19,7 @@ filters
 BOT_TOKEN = "8765085860:AAGWPNYdRPDhG_PGdcDIamMP9TS4uCpYC6A"
 API_ENDPOINT = "https://terabox.anshapi.workers.dev/api/terabox-down?url="
 
----------- Helpers ----------
+#---------- Helpers ----------
 
 def is_folder_link(url: str):
 return "filelist?surl=" in url
@@ -27,7 +27,7 @@ return "filelist?surl=" in url
 def is_valid_link(url: str):
 return "terabox.com" in url or "1024terabox.com" in url or "1024tera.com" in url or "terasharefile.com" in url
 
----------- Start Command ----------
+#---------- Start Command ----------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 await update.message.reply_text(
@@ -35,7 +35,7 @@ await update.message.reply_text(
 "⚡ Direct Fast Upload Supported"
 )
 
----------- Main Message Handler ----------
+#---------- Main Message Handler ----------
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 user_url = update.message.text.strip()
@@ -68,7 +68,7 @@ try:
 except Exception as e:  
     await msg.edit_text(f"❌ Error: {e}")
 
----------- Handle Single File ----------
+#---------- Handle Single File ----------
 
 async def handle_single_file(update, file_data):
 
@@ -113,7 +113,7 @@ await update.message.reply_document(
     parse_mode="HTML",  
 )
 
----------- Handle Folder ----------
+#---------- Handle Folder ----------
 
 async def handle_folder(update, context, folder_data):
 files = folder_data["list"]
@@ -134,7 +134,7 @@ await update.message.reply_text(
     reply_markup=InlineKeyboardMarkup(buttons)  
 )
 
----------- Callback for Folder File Selection ----------
+#---------- Callback for Folder File Selection ----------
 
 async def file_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 query = update.callback_query
@@ -172,7 +172,7 @@ await query.message.reply_document(
     parse_mode="HTML",  
 )
 
----------- Run Bot ----------
+#---------- Run Bot ----------
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
